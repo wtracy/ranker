@@ -20,7 +20,6 @@ dumpData list = do
 
 processPair :: (String, Integer) -> (String, Integer) -> IO [(String, Integer)]
 processPair x y = do
-  --bla <- runProcess "xbiff" [] Nothing Nothing Nothing Nothing Nothing
   first <- runProcess ("display") [(fst x)] Nothing Nothing Nothing Nothing Nothing
   second <- runProcess ("display") [(fst y)] Nothing Nothing Nothing Nothing Nothing
   putStrLn ("1. " ++ (fst x))
@@ -30,7 +29,6 @@ processPair x y = do
   putStrLn "Closing windows ..."
   resultA <- terminateProcess first
   resultB <- terminateProcess second
-  --terminateProcess bla
   putStrLn "Closed windows."
   if (answer == "1")
     then return [((fst x), (1 + (snd x))), y]
