@@ -99,7 +99,6 @@ processPair x y = do
 doProcessData :: [(String, Integer)] -> IO [(String, Integer)]
 doProcessData [] = return []
 doProcessData [x, y, z] = do
-  print [x, y, z]
   processedB <- processPair y x
   processedA <- processPair (head processedB) z
   return (processedA ++ (tail processedB))
@@ -136,7 +135,7 @@ main = do
     filteredArchive = [x | x <- archive, (fst x) `elem` currentFiles]
     filteredFiles = [x | x <- files, not ((fst x) `elem` archiveFiles)]
     input = filteredArchive ++ filteredFiles
-  printData (sortBy score input)
+  --printData (sortBy score input)
   results <- (processData input)
   dumpData results 
   printData (sortBy score results)
