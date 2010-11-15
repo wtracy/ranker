@@ -1,67 +1,142 @@
 import Data.Char
 import List
 import System.Process
+import System.IO
+import Directory
 
+-- Returns the contents of the working directory as a newline-delimited string
 listDirectory :: IO String
 listDirectory = do 
   readProcess "ls" [] []
 
-buildData :: [String] -> [(String, Integer)]
-buildData input = zip input (repeat 0)
+-- Converts a list of strings into a list of string-integer pairs where all the
+-- integers are initialized to zero.
+initializeData :: [String] -> [(String, Integer)]
+initializeData input = zip input (repeat 0)
 
-dumpData :: [(String, Integer)] -> IO ()
-dumpData [] = putStr ""
-dumpData list = do
+-- Currently just a wrapper for initializeData
+buildData :: [String] -> [(String, Integer)]
+buildData input = initializeData input
+
+-- Given a file handle, parse the contents assuming that it is a text file
+-- where every other line is an arbitrary string, and the remaining lines
+-- are decimal representations of integers.
+doReadData :: Handle -> IO [(String, Integer)]
+doReadData handle = do
+    --putStrLn "doReadData called"
+    done <- hIsEOF handle
+    if (not done)
+	then do
+            name <- hGetLine handle
+            scoreString <- hGetLine handle
+            theRest <- (doReadData handle)
+            let score = (read scoreString)
+            return ((name, score) : theRest)
+        else return []
+
+-- Opens a data file and parses it.
+readData :: FilePath -> IO [(String, Integer)]
+readData path = do
+    exists <- doesFileExist path
+    if (exists)
+	then do
+            handle <- openFile path ReadMode
+	    list <- doReadData handle
+	    hClose handle
+	    return list
+        else return []
+
+-- Dumps the data to standard output as a tab- and newline-delimited table.
+printData :: [(String, Integer)] -> IO ()
+printData [] = putStr ""
+printData list = do
   putStr (fst (head list))
   putStr "\t"
   putStrLn (show (snd (head list)))
-  dumpData (tail list)
+  printData (tail list)
 
+-- Writes each entry to the given file handle, as one line containing only
+-- the string value from the pair, and a second line containing a decimal
+-- representation of the integer value from the pair.
+dumpToFile :: Handle -> [(String, Integer)] -> IO ()
+dumpToFile handle [] = return ()
+dumpToFile handle list = do
+    hPutStrLn handle (fst (head list))
+    hPutStrLn handle (show (snd (head list)))
+    dumpToFile handle (tail list)
 
+-- Opens a file. Dumps the data out to said file.
+dumpData :: [(String, Integer)] -> IO ()
+dumpData list = do
+    --putStrLn "Opening file for output"
+    handle <- openFile ".rank" WriteMode
+    dumpToFile handle ((sortBy score list))
+    hClose handle
+
+-- Prompts the user to rate the given pair of images, and records the result.
 processPair :: (String, Integer) -> (String, Integer) -> IO [(String, Integer)]
 processPair x y = do
   first <- runProcess ("display") [(fst x)] Nothing Nothing Nothing Nothing Nothing
   second <- runProcess ("display") [(fst y)] Nothing Nothing Nothing Nothing Nothing
-  putStrLn ("1. " ++ (fst x))
-  putStrLn ("2. " ++ (fst y))
+  putStrLn ("1. " ++ (fst x) ++ "(currently rated " ++ (show (snd x)) ++ ")")
+  putStrLn ("2. " ++ (fst y) ++ "(currently rated " ++ (show (snd y )) ++ ")")
   putStrLn "Which do you prefer? Enter 1 or 2: "
   answer <- getLine
-  putStrLn "Closing windows ..."
+  --putStrLn "Closing windows ..."
   resultA <- terminateProcess first
   resultB <- terminateProcess second
-  putStrLn "Closed windows."
-  if (answer == "1")
-    then return [((fst x), (1 + (snd x))), y]
-    else return [x, ((fst y), (1 + (snd y)))]
+  --putStrLn "Closed windows."
+  case answer of
+    "1" -> return [((fst x), ((snd x) + 1)), ((fst y), ((snd y) - 1))]
+    "2" -> return [((fst x), ((snd x) - 1)), ((fst y), ((snd y) + 1))]
+    x -> return []
+  --if (answer == "1")
+  --  then return 
+  --  else return 
 
+-- Splits the entries into sets of two and prompts the user to compare each
+-- pair.
 doProcessData :: [(String, Integer)] -> IO [(String, Integer)]
 doProcessData [] = return []
 doProcessData [x, y, z] = do
-  processedB <- processPair x z
-  processedA <- processPair (head processedB) y
+  print [x, y, z]
+  processedB <- processPair y x
+  processedA <- processPair (head processedB) z
   return (processedA ++ (tail processedB))
 doProcessData list = 
   let
     x = head list
     y = head (tail list)
     remainder = tail (tail list)
-  in
-  do
+  in do
     processed <- processPair x y
-    processedRemainder <- doProcessData remainder
-    return (processed ++ processedRemainder)
+    if (processed == [])
+      then return list
+      else do
+        processedRemainder <- doProcessData remainder
+        return (processed ++ processedRemainder)
 
+-- sorts in descending order
 score :: (String, Integer) -> (String, Integer) -> Ordering
-score x y = compare (snd x) (snd y)
+score x y = compare (snd y) (snd x)
 
-processData :: [(String, Integer)] -> Integer -> IO [(String, Integer)]
-processData x 0 = return x
-processData x n = do
-  intermediateResults <- (doProcessData x)
-  processData (sortBy score intermediateResults) (n - 1)
+processData :: [(String, Integer)] -> IO [(String, Integer)]
+processData x = do
+  doProcessData (sortBy score x)
 
 main :: IO ()
 main = do
   list <- listDirectory
-  results <- (processData (buildData (lines list)) 1)
-  dumpData results
+  --results <- processData (buildData (lines list)) 1
+  archive <- readData ".rank"
+  let
+    files = buildData (lines list)
+    archiveFiles = map fst archive
+    currentFiles = map fst files
+    filteredArchive = [x | x <- archive, (fst x) `elem` currentFiles]
+    filteredFiles = [x | x <- files, not ((fst x) `elem` archiveFiles)]
+    input = filteredArchive ++ filteredFiles
+  printData (sortBy score input)
+  results <- (processData input)
+  dumpData results 
+  printData (sortBy score results)
