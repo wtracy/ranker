@@ -78,8 +78,8 @@ processPair :: (String, Integer) -> (String, Integer) -> IO [(String, Integer)]
 processPair x y = do
   first <- runProcess ("display") [(fst x)] Nothing Nothing Nothing Nothing Nothing
   second <- runProcess ("display") [(fst y)] Nothing Nothing Nothing Nothing Nothing
-  putStrLn ("1. " ++ (fst x) ++ "(currently rated " ++ (show (snd x)) ++ ")")
-  putStrLn ("2. " ++ (fst y) ++ "(currently rated " ++ (show (snd y )) ++ ")")
+  putStrLn ("1. " ++ (fst x) ++ " (currently rated " ++ (show (snd x)) ++ ")")
+  putStrLn ("2. " ++ (fst y) ++ " (currently rated " ++ (show (snd y )) ++ ")")
   putStrLn "Which do you prefer? Enter 1 or 2: "
   answer <- getLine
   --putStrLn "Closing windows ..."
