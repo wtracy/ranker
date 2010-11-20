@@ -80,7 +80,7 @@ processPair x y = do
   second <- runProcess ("display") [(fst y)] Nothing Nothing Nothing Nothing Nothing
   putStrLn ("1. " ++ (fst x) ++ " (currently rated " ++ (show (snd x)) ++ ")")
   putStrLn ("2. " ++ (fst y) ++ " (currently rated " ++ (show (snd y )) ++ ")")
-  putStrLn "Which do you prefer? Enter 1 or 2: "
+  putStrLn "Pick your favorite. Enter 1 or 2: "
   answer <- getLine
   --putStrLn "Closing windows ..."
   resultA <- terminateProcess first
@@ -90,9 +90,6 @@ processPair x y = do
     "1" -> return [((fst x), ((snd x) + 1)), ((fst y), ((snd y) - 1))]
     "2" -> return [((fst x), ((snd x) - 1)), ((fst y), ((snd y) + 1))]
     x -> return []
-  --if (answer == "1")
-  --  then return 
-  --  else return 
 
 -- Splits the entries into sets of two and prompts the user to compare each
 -- pair.
@@ -115,9 +112,12 @@ doProcessData list =
         processedRemainder <- doProcessData remainder
         return (processed ++ processedRemainder)
 
--- sorts in descending order
+-- sorts pairs by score, ignoring file names
 score :: (String, Integer) -> (String, Integer) -> Ordering
+-- sort in descending order
 score x y = compare (snd y) (snd x)
+-- sort ascending
+--score x y = compare (snd x) (snd y)
 
 processData :: [(String, Integer)] -> IO [(String, Integer)]
 processData x = do
@@ -138,4 +138,4 @@ main = do
   --printData (sortBy score input)
   results <- (processData input)
   dumpData results 
-  printData (sortBy score results)
+  --printData (sortBy score results)
