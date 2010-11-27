@@ -2,6 +2,7 @@ import Data.Char
 import List
 import System.Process
 import System.IO
+import System.Environment
 import Directory
 
 -- Returns the contents of the working directory as a newline-delimited string
@@ -89,16 +90,17 @@ processPair x y = do
   case answer of
     "1" -> return [((fst x), ((snd x) + 1)), ((fst y), ((snd y) - 1))]
     "2" -> return [((fst x), ((snd x) - 1)), ((fst y), ((snd y) + 1))]
-    x -> return []
+    z -> return []
 
 -- Splits the entries into sets of two and prompts the user to compare each
 -- pair.
-doProcessData :: [(String, Integer)] -> IO [(String, Integer)]
-doProcessData [] = return []
-doProcessData [x, y, z] = do
-  processedB <- processPair y x
-  processedA <- processPair (head processedB) z
-  return (processedA ++ (tail processedB))
+doProcessData :: [(String, Integer)] -> IO (Bool, [(String, Integer)])
+doProcessData [] = return (True, [])
+doProcessData [x] = return (True, [x])
+--doProcessData [x, y, z] = do
+--  processedB <- processPair y x
+--  processedA <- processPair (head processedB) z
+--  return (processedA ++ (tail processedB))
 doProcessData list = 
   let
     x = head list
@@ -107,10 +109,10 @@ doProcessData list =
   in do
     processed <- processPair x y
     if (processed == [])
-      then return list
+      then return (False, list)
       else do
         processedRemainder <- doProcessData remainder
-        return (processed ++ processedRemainder)
+        return ((fst processedRemainder), (processed ++ (snd processedRemainder)))
 
 -- sorts pairs by score, ignoring file names
 score :: (String, Integer) -> (String, Integer) -> Ordering
@@ -121,12 +123,21 @@ score x y = compare (snd y) (snd x)
 
 processData :: [(String, Integer)] -> IO [(String, Integer)]
 processData x = do
-  doProcessData (sortBy score x)
+  result <- doProcessData (sortBy score x)
+  let resultData = (snd result)
+  if (fst result)
+    then (processData (sortBy score (resultData)))
+    else return (resultData)
 
 main :: IO ()
 main = do
+  args <- getArgs
+  if ((length args) > 0)
+      then setCurrentDirectory (head args)
+      else return ()
+  dir <- getCurrentDirectory
+  putStrLn dir
   list <- listDirectory
-  --results <- processData (buildData (lines list)) 1
   archive <- readData ".rank"
   let
     files = buildData (lines list)
@@ -136,6 +147,6 @@ main = do
     filteredFiles = [x | x <- files, not ((fst x) `elem` archiveFiles)]
     input = filteredArchive ++ filteredFiles
   --printData (sortBy score input)
-  results <- (processData input)
+  results <- processData (input)
   dumpData results 
   --printData (sortBy score results)
