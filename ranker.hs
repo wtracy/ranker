@@ -50,69 +50,58 @@ readData path = do
 -- Dumps the data to standard output as a tab- and newline-delimited table.
 printData :: [(String, Integer)] -> IO ()
 printData [] = putStr ""
-printData list = do
-  putStr (fst (head list))
+printData ((name, score):remainder) = do
+  putStr name
   putStr "\t"
-  putStrLn (show (snd (head list)))
-  printData (tail list)
+  putStrLn (show score)
+  printData (remainder)
 
 -- Writes each entry to the given file handle, as one line containing only
 -- the string value from the pair, and a second line containing a decimal
 -- representation of the integer value from the pair.
 dumpToFile :: Handle -> [(String, Integer)] -> IO ()
 dumpToFile handle [] = return ()
-dumpToFile handle list = do
-    hPutStrLn handle (fst (head list))
-    hPutStrLn handle (show (snd (head list)))
-    dumpToFile handle (tail list)
+dumpToFile handle ((name, score):remainder) = do
+    hPutStrLn handle name
+    hPutStrLn handle (show score)
+    dumpToFile handle remainder
 
 -- Opens a file. Dumps the data out to said file.
 dumpData :: [(String, Integer)] -> IO ()
 dumpData list = do
     --putStrLn "Opening file for output"
     handle <- openFile ".rank" WriteMode
-    dumpToFile handle ((sortBy score list))
+    dumpToFile handle (sortBy score list)
     hClose handle
 
 -- Prompts the user to rate the given pair of images, and records the result.
 processPair :: (String, Integer) -> (String, Integer) -> IO [(String, Integer)]
-processPair x y = do
-  first <- runProcess ("display") [(fst x)] Nothing Nothing Nothing Nothing Nothing
-  second <- runProcess ("display") [(fst y)] Nothing Nothing Nothing Nothing Nothing
-  putStrLn ("1. " ++ (fst x) ++ " (currently rated " ++ (show (snd x)) ++ ")")
-  putStrLn ("2. " ++ (fst y) ++ " (currently rated " ++ (show (snd y )) ++ ")")
-  putStrLn "Pick your favorite. Enter 1 or 2: "
+processPair (xName, xScore) (yName, yScore) = do
+  first <- runProcess ("display") [xName] Nothing Nothing Nothing Nothing Nothing
+  second <- runProcess ("display") [yName] Nothing Nothing Nothing Nothing Nothing
+  putStrLn ("a. " ++ (xName) ++ " (currently rated " ++ (show xScore) ++ ")")
+  putStrLn ("b. " ++ (yName) ++ " (currently rated " ++ (show yScore) ++ ")")
+  putStrLn "Pick your favorite. Enter a or b: "
   answer <- getLine
-  --putStrLn "Closing windows ..."
   resultA <- terminateProcess first
   resultB <- terminateProcess second
-  --putStrLn "Closed windows."
   case answer of
-    "1" -> return [((fst x), ((snd x) + 1)), ((fst y), ((snd y) - 1))]
-    "2" -> return [((fst x), ((snd x) - 1)), ((fst y), ((snd y) + 1))]
-    z -> return []
+    "a" -> return [(xName, (xScore + 1)), (yName, (yScore - 1))]
+    "b" -> return [(xName, (xScore - 1)), (yName, (yScore + 1))]
+    invalidInput -> return []
 
 -- Splits the entries into sets of two and prompts the user to compare each
 -- pair.
 doProcessData :: [(String, Integer)] -> IO (Bool, [(String, Integer)])
 doProcessData [] = return (True, [])
 doProcessData [x] = return (True, [x])
---doProcessData [x, y, z] = do
---  processedB <- processPair y x
---  processedA <- processPair (head processedB) z
---  return (processedA ++ (tail processedB))
-doProcessData list = 
-  let
-    x = head list
-    y = head (tail list)
-    remainder = tail (tail list)
-  in do
+doProcessData (x:y:remainder) = do
     processed <- processPair x y
     if (processed == [])
-      then return (False, list)
+      then return (False, x:y:remainder)
       else do
-        processedRemainder <- doProcessData remainder
-        return ((fst processedRemainder), (processed ++ (snd processedRemainder)))
+        (success, processedRemainder) <- doProcessData remainder
+        return (success, (processed ++ processedRemainder))
 
 -- sorts pairs by score, ignoring file names
 score :: (String, Integer) -> (String, Integer) -> Ordering
@@ -122,10 +111,15 @@ score x y = compare (snd y) (snd x)
 --score x y = compare (snd x) (snd y)
 
 processData :: [(String, Integer)] -> IO [(String, Integer)]
+processData [] = do 
+  putStrLn "No files to rank!"
+  return[]
+processData [x] = do 
+  putStrLn "It doesn't make sense to rank a single file."
+  return [x]
 processData x = do
-  result <- doProcessData (sortBy score x)
-  let resultData = (snd result)
-  if (fst result)
+  (success, resultData) <- doProcessData (sortBy score x)
+  if (success)
     then (processData (sortBy score (resultData)))
     else return (resultData)
 
@@ -143,8 +137,8 @@ main = do
     files = buildData (lines list)
     archiveFiles = map fst archive
     currentFiles = map fst files
-    filteredArchive = [x | x <- archive, (fst x) `elem` currentFiles]
-    filteredFiles = [x | x <- files, not ((fst x) `elem` archiveFiles)]
+    filteredArchive = [x | x@(y, _) <- archive,   (y `elem` currentFiles)]
+    filteredFiles   = [x | x@(y, _) <- files, not (y `elem` archiveFiles)]
     input = filteredArchive ++ filteredFiles
   --printData (sortBy score input)
   results <- processData (input)
