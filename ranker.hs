@@ -106,9 +106,7 @@ doProcessData (x:y:remainder) = do
 -- sorts pairs by score, ignoring file names
 score :: (String, Integer) -> (String, Integer) -> Ordering
 -- sort in descending order
-score x y = compare (snd y) (snd x)
--- sort ascending
---score x y = compare (snd x) (snd y)
+score (_, x) (_, y) = compare y x
 
 processData :: [(String, Integer)] -> IO [(String, Integer)]
 processData [] = do 
