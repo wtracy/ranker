@@ -4,6 +4,7 @@ import System.Process
 import System.IO
 import System.Environment
 import Directory
+import Control.Monad
 
 -- Returns the contents of the working directory as a newline-delimited string
 listDirectory :: IO String
@@ -27,13 +28,13 @@ doReadData handle = do
     --putStrLn "doReadData called"
     done <- hIsEOF handle
     if (not done)
-	then do
+      then do
             name <- hGetLine handle
             scoreString <- hGetLine handle
             theRest <- (doReadData handle)
             let score = (read scoreString)
             return ((name, score) : theRest)
-        else return []
+      else return []
 
 -- Opens a data file and parses it.
 readData :: FilePath -> IO [(String, Integer)]
@@ -77,14 +78,14 @@ dumpData list = do
 -- Prompts the user to rate the given pair of images, and records the result.
 processPair :: (String, Integer) -> (String, Integer) -> IO [(String, Integer)]
 processPair (xName, xScore) (yName, yScore) = do
-  first <- runProcess ("display") [xName] Nothing Nothing Nothing Nothing Nothing
-  second <- runProcess ("display") [yName] Nothing Nothing Nothing Nothing Nothing
+  first <- runProcess ("feh") [xName, yName] Nothing Nothing Nothing Nothing Nothing
+  --second <- runProcess ("feh") [yName] Nothing Nothing Nothing Nothing Nothing
   putStrLn ("a. " ++ (xName) ++ " (currently rated " ++ (show xScore) ++ ")")
   putStrLn ("b. " ++ (yName) ++ " (currently rated " ++ (show yScore) ++ ")")
   putStrLn "Pick your favorite. Enter a or b: "
   answer <- getLine
   resultA <- terminateProcess first
-  resultB <- terminateProcess second
+  --resultB <- terminateProcess second
   case answer of
     "a" -> return [(xName, (xScore + 1)), (yName, (yScore - 1))]
     "b" -> return [(xName, (xScore - 1)), (yName, (yScore + 1))]
@@ -107,6 +108,8 @@ doProcessData (x:y:remainder) = do
 score :: (String, Integer) -> (String, Integer) -> Ordering
 -- sort in descending order
 score (_, x) (_, y) = compare y x
+-- sort in ascending order
+-- score (_, x) (_, y) = compare x y
 
 processData :: [(String, Integer)] -> IO [(String, Integer)]
 processData [] = do 
@@ -117,9 +120,10 @@ processData [x] = do
   return [x]
 processData x = do
   (success, resultData) <- doProcessData (sortBy score x)
-  if (success)
-    then (processData (sortBy score (resultData)))
-    else return (resultData)
+  when (success) $ do
+    (success, resultData) <- doProcessData (sortBy score resultData)
+    return ()
+  return (resultData)
 
 main :: IO ()
 main = do
