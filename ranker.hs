@@ -109,7 +109,7 @@ score :: (String, Integer) -> (String, Integer) -> Ordering
 -- sort in descending order
 score (_, x) (_, y) = compare y x
 -- sort in ascending order
--- score (_, x) (_, y) = compare x y
+--score (_, x) (_, y) = compare x y
 
 processData :: [(String, Integer)] -> IO [(String, Integer)]
 processData [] = do 
