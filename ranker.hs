@@ -1,9 +1,9 @@
 import Data.Char
-import List
+import Data.List
 import System.Process
 import System.IO
 import System.Environment
-import Directory
+import System.Directory
 import Control.Monad
 
 -- Returns the contents of the working directory as a newline-delimited string
