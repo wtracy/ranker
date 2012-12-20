@@ -2,4 +2,4 @@ You've seen sites like http://thefairest.info/ and http://kittenwar.com/
 
 This application lets you do this with the images you have on your own computer!
 
-I'm writing this application mainly to teach myself Haskell, so don't expect it to be pretty. It assumes a Unix-like environment, including the presence of the "ls" command and the "display" command from ImageMagick. Execute it from the directory containing the images you wish to rank.
+I'm writing this application mainly to teach myself Haskell, so don't expect it to be pretty. It assumes a Unix-like environment, including the presence of the "ls" command and the "feh" command. Execute it from the directory containing the images you wish to rank.
